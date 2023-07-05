@@ -1,119 +1,158 @@
 const express = require('express');
-const Model = require('./model');
+const userObj = require('./users');
+var uuid = require('uuid');
 
 const router = express.Router()
 
 //Get all Method
-router.get('/users', async (req, res, next) => {
+router.get('/users', async (req, res) => {
     try {
-        const data = await Model.find();
-        res.status(200).json({
-            message: "Users retrieved",
-            success: true,
-            users: data
-        })
+        if (!userObj || userObj.length === 0) {
+            return res.status(404).json({
+                success: false,
+                data: "Users not found!"
+            })
+        }
     }
     catch (error) {
-        next({
-            message: error.message,
+        return res.status(500).json({
+            message: "Internal server error",
             statusCode: 500,
         })
     }
+    return res.status(200).json({
+        message: "Users retrieved",
+        success: true,
+        users: userObj
+    })
 })
 
 //Update by ID Method
-router.put('/update/:id', async (req, res, next) => {
+router.put('/update/:id', async (req, res) => {
+    const id = req.params.id;
+    const body = req.body;
+    let userFound = false;
     try {
-        const id = req.params.id;
-        const updatedData = req.body;
-        const options = { new: true };
-
-        const result = await Model.findByIdAndUpdate(
-            id, updatedData, options
-        )
-
-        res.status(200).send({
-            message: "User updated",
-            success: true,
-            user: result
-        })
+        if (!Object.keys(body).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Incorrect request body. Required fields: email and/or firstName"
+            })
+        }
     }
     catch (error) {
-        next({
-            statusCode: 400,
-            message: error.message
+        return res.status(500).json({
+            statusCode: 500,
+            message: "Internal server error"
         });
     }
+    userObj.forEach((user) => {
+        if (user.id === id) {
+            userFound = true;
+            if (body.email) user.email = body.email;
+            if (body.firstName) user.firstName = body.firstName;
+        }
+    })
+    if (!userFound) {
+        return res.status(404).json({
+            success: false,
+            message: "User not found!"
+        })
+    }
+    return res.status(200).send({
+        message: "User updated",
+        success: true
+    })
 })
 
 //Post Method
-router.post('/add', async (req, res, next) => {
-    const data = new Model({
-        firstName: req.body.firstName,
-        email: req.body.email
-    })
-
+router.post('/add', async (req, res) => {
+    const body = req.body;
+    const id = uuid.v4();
     try {
-        const dataToSave = await data.save();
-        res.status(200).json({
-            message: "User added",
-            success: true,
-            user: dataToSave
-        })
+
+        if (!Object.keys(body).length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Incorrect request body. Required fields: email, firstName"
+            })
+        } else if (!req.body.email) {
+            return res.status(400).json({
+                success: false,
+                message: "Incorrect request body. Required fields: email"
+            })
+        } else if (!req.body.firstName) {
+            return res.status(400).json({
+                success: false,
+                message: "Incorrect request body. Required fields: firstName"
+            })
+        } else {
+            body.id = id;
+            userObj.push(body);
+        }
     }
     catch (error) {
-        next({
-            statusCode: 400,
-            message: error.message
+        return res.status(500).json({
+            statusCode: 500,
+            message: "Internal server error"
         });
     }
+    return res.status(200).send({
+        message: "User added",
+        success: true,
+        id: id
+    })
 })
 
 //Get by ID Method
-router.get('/user/:id', async (req, res, next) => {
+router.get('/user/:id', async (req, res) => {
     try {
-        const data = await Model.findById(req.params.id);
-        res.json({
-            success: true,
-            user: data
-        })
+        if (!userObj || userObj.length === 0) {
+            return res.status(404).json({
+                success: false,
+                data: "Users not found!"
+            })
+        }
     }
     catch (error) {
-        next({
+        return res.status(500).json({
+            message: "Internal server error",
             statusCode: 500,
-            message: error.message
-        });
+        })
+    }
+    const id = req.params.id;
+    let userFound = false;
+    userObj.forEach((user) => {
+        if (user.id === id) {
+            userFound = true;
+            return res.status(200).json({
+                success: true,
+                data: {
+                    email: user.email,
+                    firstName: user.firstName,
+                    id: user.id
+                }
+            })
+        }
+    })
+    if (!userFound) {
+        return res.status(404).json({
+            success: false,
+            message: "User not found!"
+        })
     }
 })
 
 
 // 404 error handler
 const notFoundHandler = (req, res, next) => {
-    const error = new Error(`Not Found - ${req.originalUrl}`);
-    error.statusCode = 404;
-    next(error);
+    res.status(404).json({
+        success: false,
+        message: `Requested URL not found - ${req.originalUrl}`
+    });
 };
 
 // Attach the not found handler middleware
 router.use(notFoundHandler);
-
-// Error handling middleware
-const errorHandler = (error, req, res, next) => {
-    let statusCode = 500;
-    let message = 'Internal Server Error';
-
-    if (error.statusCode) {
-        statusCode = error.statusCode;
-        message = error.message;
-    }
-
-    res.status(statusCode).json({
-        message: message,
-        success: false
-    });
-};
-
-// Attach the error handler middleware
-router.use(errorHandler);
 
 module.exports = router
