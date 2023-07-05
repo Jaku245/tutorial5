@@ -33,7 +33,7 @@ router.put('/update/:id', async (req, res) => {
     const body = req.body;
     let userFound = false;
     try {
-        if (!Object.keys(body).length === 0) {
+        if (Object.keys(body).length === 0) {
             return res.status(400).json({
                 success: false,
                 message: "Incorrect request body. Required fields: email and/or firstName"
@@ -71,7 +71,7 @@ router.post('/add', async (req, res) => {
     const id = uuid.v4();
     try {
 
-        if (!Object.keys(body).length === 0) {
+        if (Object.keys(body).length === 0) {
             return res.status(400).json({
                 success: false,
                 message: "Incorrect request body. Required fields: email, firstName"
