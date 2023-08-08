@@ -4,7 +4,7 @@ const router = express.Router();
 const Product = require("../Models/Products");
 const bodyParser = require("body-parser");
 
-router.use(bodyParser.json({ limit: "10Mb" }));
+router.use(bodyParser.json({ limit: "100Mb" }));
 
 // Route to create a new product
 router.post("/addProduct", async (req, res) => {
@@ -95,7 +95,6 @@ router.put("/products/:id", async (req, res) => {
     res.status(500).json({ error: "Unable to update product" });
   }
 });
-//Route to get all products with the Array of Ids
 router.get('/product', async (req, res) => {
   const { ids } = req.query;
   console.log(ids);
@@ -104,8 +103,9 @@ router.get('/product', async (req, res) => {
     return res.status(400).json({ error: 'Invalid or missing product IDs' });
   }
 
-  // Split the comma-separated string of IDs into an array
   const idArray = ids.split(',');
+
+  console.log(idArray,"idArray")
 
   try {
     const products = await Product.find({ _id: { $in: idArray } });
@@ -136,5 +136,21 @@ router.delete("/products/:id", async (req, res) => {
     res.status(500).json({ error: "Unable to delete product" });
   }
 });
+
+router.get("/product/:id", async (req, res) => {
+  const productId = req.params.id;
+
+  try {
+    const product = await Product.findById(productId);
+    if (product) {
+      res.status(200).json(product);
+    } else {
+      res.status(404).json({ message: "Product not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Unable to fetch product" });
+  }
+}
+);
 
 module.exports = router;
